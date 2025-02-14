@@ -1,16 +1,33 @@
 package com.leoholmer.AllMusic.model;
 
+import jakarta.persistence.*;
+
+@Entity
+@Inheritance(strategy = InheritanceType.JOINED)
+@Table(name="users")
 public class Song {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String id;
-    private String name;
-    private MusicArtist author;
+
+    @Column(nullable = false)
+    private String title;
+
+    @Enumerated(EnumType.STRING)
     private Genre genre;
 
-    public Song(Genre genre, MusicArtist author, String name, String id) {
+    @ManyToOne
+    @JoinColumn(name = "artist_id", nullable = false)
+    private MusicArtistUser artist;
+
+    public Song(Genre genre, MusicArtistUser artist, String title) {
         this.genre = genre;
-        this.author = author;
-        this.name = name;
-        this.id = id;
+        this.artist = artist;
+        this.title = title;
+    }
+
+    public Song() {
+
     }
 
     public String getId() {
@@ -21,20 +38,12 @@ public class Song {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
+    public String getTitle() {
+        return title;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public MusicArtist getAuthor() {
-        return author;
-    }
-
-    public void setAuthor(MusicArtist author) {
-        this.author = author;
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public Genre getGenre() {
@@ -43,5 +52,13 @@ public class Song {
 
     public void setGenre(Genre genre) {
         this.genre = genre;
+    }
+
+    public MusicArtistUser getArtist() {
+        return artist;
+    }
+
+    public void setArtist(MusicArtistUser artist) {
+        this.artist = artist;
     }
 }

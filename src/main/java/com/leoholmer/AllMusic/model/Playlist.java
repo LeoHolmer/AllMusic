@@ -1,17 +1,38 @@
 package com.leoholmer.AllMusic.model;
 
-import java.util.List;
+import jakarta.persistence.*;
 
+import java.util.List;
+@Entity
+@Table(name = "playlists")
 public class Playlist {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
+
+    @Column(nullable = false)
     private String name;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
     private User owner;
+
+    @ManyToMany
+    @JoinTable(
+            name = "playlist_song",
+            joinColumns = @JoinColumn(name = "playlist_id"),
+            inverseJoinColumns = @JoinColumn (name = "song_id")
+    )
     private List<Song> songs;
 
-    public Playlist(long id, String name, List<Song> songs) {
+    public Playlist(String name, List<Song> songs, User owner) {
         this.songs = songs;
         this.name = name;
-        this.id = id;
+        this.owner = owner;
+    }
+
+    public Playlist() {
+
     }
 
     public long getId() {
@@ -44,5 +65,9 @@ public class Playlist {
 
     public void setSongs(List<Song> songs) {
         this.songs = songs;
+    }
+
+    public void addSong(Song song) {
+        songs.add(song);
     }
 }
