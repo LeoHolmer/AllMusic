@@ -1,13 +1,16 @@
 package com.leoholmer.AllMusic.Backend.service;
 
-import com.leoholmer.AllMusic.Backend.model.*;
+import com.leoholmer.AllMusic.Backend.model.Genre;
+import com.leoholmer.AllMusic.Backend.model.MusicArtistUser;
+import com.leoholmer.AllMusic.Backend.model.Playlist;
+import com.leoholmer.AllMusic.Backend.model.Song;
+import com.leoholmer.AllMusic.Backend.model.User;
 import com.leoholmer.AllMusic.Backend.repository.SongRepository;
 import com.leoholmer.AllMusic.Backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-
 
 @Service
 public class SongServiceImp implements SongService {
@@ -38,7 +41,7 @@ public class SongServiceImp implements SongService {
     @Override
     public void createSong(Song song, User user) throws Exception {
         if (!(user instanceof MusicArtistUser)) {
-            throw new Exception("Only artists can create songs.");
+            throw new Exception("Only music artists can create songs.");
         }
         song.setArtist((MusicArtistUser) user);
         songRepository.save(song);

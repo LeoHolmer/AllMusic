@@ -1,5 +1,6 @@
 package com.leoholmer.AllMusic.Backend.service;
 
+import com.leoholmer.AllMusic.Backend.UserNotFoundException;
 import com.leoholmer.AllMusic.Backend.model.User;
 import com.leoholmer.AllMusic.Backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +13,8 @@ public class UserServiceImp implements UserService {
     private UserRepository userRepository;
 
     @Override
-    public User findByUsername(String username) throws Exception {
-        return userRepository.findByUsername(username);
+    public User findByUsername(String username) throws UserNotFoundException {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UserNotFoundException("User not found with username: " + username));
     }
 }

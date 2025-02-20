@@ -20,10 +20,18 @@ public class AuthenticationServiceImp implements AuthenticationService {
 
     @Override
     public String authenticate(User user) throws Exception {
+        // Buscar al usuario por su nombre de usuario
         User existingUser = userService.findByUsername(user.getUsername());
-        if (existingUser == null || !passwordEncoder.verify(user.getPassword(), existingUser.getPassword())) {
-            throw new Exception("Invalid credentials");
+        if (existingUser == null) {
+            throw new Exception("User not found");
         }
+
+        // Verificar la contraseña
+        if (!passwordEncoder.verify(user.getPassword(), existingUser.getPassword())) {
+            throw new Exception("Invalid password");
+        }
+
+        // Generar y devolver el token JWT
         return jwtTokenUtil.generateToken(existingUser.getUsername());
     }
 }
