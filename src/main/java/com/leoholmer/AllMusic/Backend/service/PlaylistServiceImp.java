@@ -46,7 +46,7 @@ public class PlaylistServiceImp implements PlaylistService {
 
     @Override
     public List<Playlist> getPlaylistsByUser(User user) {
-        return playlistRepository.findByUser(user);
+        return playlistRepository.findByOwner(user);
     }
 
     @Override

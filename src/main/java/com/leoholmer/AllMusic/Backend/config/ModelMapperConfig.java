@@ -2,6 +2,7 @@ package com.leoholmer.AllMusic.Backend.config;
 
 import com.leoholmer.AllMusic.Backend.dto.SongResponseDTO;
 import com.leoholmer.AllMusic.Backend.model.Song;
+import org.modelmapper.Converter;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeMap;
 import org.springframework.context.annotation.Bean;
@@ -14,11 +15,15 @@ public class ModelMapperConfig {
     public ModelMapper modelMapper() {
         ModelMapper modelMapper = new ModelMapper();
 
-        // Configurar mapeo personalizado entre Song y SongResponseDTO
+        // Converter para transformar Genre a String
+        Converter<?, String> genreToStringConverter = ctx ->
+                ctx.getSource() == null ? null : ctx.getSource().toString();
+
+        // Mapeo personalizado entre Song y SongResponseDTO
         TypeMap<Song, SongResponseDTO> typeMap = modelMapper.createTypeMap(Song.class, SongResponseDTO.class);
         typeMap.addMappings(mapper -> {
             mapper.map(Song::getTitle, SongResponseDTO::setName);
-            mapper.map(song -> song.getGenre().toString(), SongResponseDTO::setGenre);
+            mapper.using(genreToStringConverter).map(Song::getGenre, SongResponseDTO::setGenre);
         });
 
         return modelMapper;

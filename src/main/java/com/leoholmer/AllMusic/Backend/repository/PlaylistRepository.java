@@ -10,12 +10,9 @@ import java.util.List;
 @Repository
 public interface PlaylistRepository extends JpaRepository<Playlist, Long> {
 
-    // Buscar playlists por usuario
-    List<Playlist> findByUser(User user);
+    // Buscar playlists por propietario (owner)
+    List<Playlist> findByOwner(User owner);
 
-    // Buscar una playlist por ID
-    Playlist findByIdAndUser(Long id, User user);
-
-
-
+    // Buscar una playlist por ID y propietario
+    Playlist findByIdAndOwner(Long id, User owner);
 }

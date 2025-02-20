@@ -1,6 +1,6 @@
 package com.leoholmer.AllMusic.Backend.service;
 
-import com.leoholmer.AllMusic.Backend.UserNotFoundException;
+import com.leoholmer.AllMusic.Backend.exception.UserNotFoundException;
 import com.leoholmer.AllMusic.Backend.model.User;
 import com.leoholmer.AllMusic.Backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;

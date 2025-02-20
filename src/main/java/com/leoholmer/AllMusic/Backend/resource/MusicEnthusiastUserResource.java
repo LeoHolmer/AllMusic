@@ -9,8 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/enthusiat")
-public class MusicEnthusiatUserResource {
+@RequestMapping("/enthusiast")
+public class MusicEnthusiastUserResource {
 
     @Autowired
     private AuthenticationService authenticationService;

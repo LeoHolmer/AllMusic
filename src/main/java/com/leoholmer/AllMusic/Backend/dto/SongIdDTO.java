@@ -1,13 +1,8 @@
 package com.leoholmer.AllMusic.Backend.dto;
 
+import lombok.Data;
+
+@Data
 public class SongIdDTO {
     private Long songId;
-
-    public Long getSongId() {
-        return songId;
-    }
-
-    public void setSongId(Long songId) {
-        this.songId = songId;
-    }
 }

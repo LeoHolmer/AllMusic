@@ -2,8 +2,10 @@ package com.leoholmer.AllMusic.Backend.resource;
 
 import com.leoholmer.AllMusic.Backend.dto.SongRequestDTO;
 import com.leoholmer.AllMusic.Backend.dto.SongResponseDTO;
+import com.leoholmer.AllMusic.Backend.exception.BadRequestException;
+import com.leoholmer.AllMusic.Backend.exception.ResourceNotFoundException;
+import com.leoholmer.AllMusic.Backend.exception.UnauthorizedException;
 import com.leoholmer.AllMusic.Backend.model.Genre;
-import com.leoholmer.AllMusic.Backend.model.Playlist;
 import com.leoholmer.AllMusic.Backend.model.Song;
 import com.leoholmer.AllMusic.Backend.model.User;
 import com.leoholmer.AllMusic.Backend.service.AuthorizationService;
@@ -30,139 +32,125 @@ public class SongResource {
     @Autowired
     private ModelMapper modelMapper;
 
-    // GET /songs?artist=:artist_name&genre=:genre
+    /**
+     * Método auxiliar para asegurar que el token tenga el formato correcto.
+     * Si no empieza con "Bearer ", se lo agrega.
+     */
+    private String extractToken(String authHeader) {
+        if (authHeader == null || authHeader.trim().isEmpty()) {
+            throw new UnauthorizedException("Missing Authorization header");
+        }
+        if (!authHeader.startsWith("Bearer ")) {
+            return "Bearer " + authHeader;
+        }
+        return authHeader;
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createSong(@Valid @RequestBody SongRequestDTO dto,
+                                        @RequestHeader("Authorization") String token) {
+        User user = authorizationService.authorize(extractToken(token));
+
+        Genre genre;
+        try {
+            genre = Genre.valueOf(dto.getGenre().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Género inválido: " + dto.getGenre());
+        }
+
+        Song song = new Song();
+        song.setTitle(dto.getName());
+        song.setGenre(genre);
+        song.setArtist(user);
+
+        try {
+            songService.createSong(song, user);
+        } catch (Exception ex) {
+            throw new BadRequestException(ex.getMessage());
+        }
+        return ResponseEntity.status(201).build();
+    }
+
     @GetMapping
-    public ResponseEntity<?> getSongs(
+    public ResponseEntity<List<SongResponseDTO>> getSongs(
             @RequestParam(required = false) String artist,
             @RequestParam(required = false) String genreParam,
             @RequestHeader("Authorization") String token) {
-        try {
-            User user = authorizationService.authorize(token);
 
-            Genre genre = null;
-            if (genreParam != null) {
-                try {
-                    genre = Genre.valueOf(genreParam.toUpperCase());
-                } catch (IllegalArgumentException e) {
-                    return ResponseEntity.status(400).body("Invalid genre");
-                }
+        authorizationService.authorize(extractToken(token));
+
+        Genre genre = null;
+        if (genreParam != null) {
+            try {
+                genre = Genre.valueOf(genreParam.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new BadRequestException("Género inválido: " + genreParam);
             }
-
-            List<Song> songs = songService.getSongs(artist, genre);
-            List<SongResponseDTO> response = songs.stream()
-                    .map(song -> modelMapper.map(song, SongResponseDTO.class))
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.status(403).body(e.getMessage());
         }
+        List<Song> songs = songService.getSongs(artist, genre);
+        List<SongResponseDTO> response = songs.stream()
+                .map(song -> modelMapper.map(song, SongResponseDTO.class))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
     }
 
-    // GET /songs/:id
     @GetMapping("/{id}")
-    public ResponseEntity<?> getSong(@PathVariable Long id, @RequestHeader("Authorization") String token) {
-        try {
-            authorizationService.authorize(token);
-            Song song = songService.getSongById(id);
-            if (song == null) {
-                return ResponseEntity.status(404).body("Song not found");
-            }
-            return ResponseEntity.ok(modelMapper.map(song, SongResponseDTO.class));
-        } catch (Exception e) {
-            return ResponseEntity.status(403).body(e.getMessage());
+    public ResponseEntity<SongResponseDTO> getSong(@PathVariable Long id,
+                                                   @RequestHeader("Authorization") String token) {
+        authorizationService.authorize(extractToken(token));
+        Song song = songService.getSongById(id);
+        if (song == null) {
+            throw new ResourceNotFoundException("Canción no encontrada con ID: " + id);
         }
+        SongResponseDTO dto = modelMapper.map(song, SongResponseDTO.class);
+        return ResponseEntity.ok(dto);
     }
 
-    // POST /songs
-    @PostMapping
-    public ResponseEntity<?> createSong(@Valid @RequestBody SongRequestDTO dto, @RequestHeader("Authorization") String token) {
-        try {
-            User user = authorizationService.authorize(token);
-            if (!user.canCreateSongs()) {
-                return ResponseEntity.status(403).body("Only music artists can create songs");
-            }
-
-            Song song = new Song();
-            song.setTitle(dto.getName());
-
-            try {
-                Genre genre = Genre.valueOf(dto.getGenre().toUpperCase());
-                song.setGenre(genre);
-            } catch (IllegalArgumentException e) {
-                return ResponseEntity.status(400).body("Invalid genre");
-            }
-
-            song.setArtist(user);
-            songService.createSong(song, user);
-            return ResponseEntity.status(201).build();
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body(e.getMessage());
-        }
-    }
-
-    // PUT /songs/:id
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateSong(@PathVariable Long id, @Valid @RequestBody SongRequestDTO dto, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<?> updateSong(@PathVariable Long id,
+                                        @Valid @RequestBody SongRequestDTO dto,
+                                        @RequestHeader("Authorization") String token) {
+        User user = authorizationService.authorize(extractToken(token));
+
+        Genre genre;
         try {
-            User user = authorizationService.authorize(token);
-            Song song = songService.getSongById(id);
-
-            if (song == null || !song.getArtist().equals(user)) {
-                return ResponseEntity.status(403).body("You are not authorized to update this song");
-            }
-
-            song.setTitle(dto.getName());
-
-            try {
-                Genre genre = Genre.valueOf(dto.getGenre().toUpperCase());
-                song.setGenre(genre);
-            } catch (IllegalArgumentException e) {
-                return ResponseEntity.status(400).body("Invalid genre");
-            }
-
-            songService.updateSong(id, song, user);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body(e.getMessage());
+            genre = Genre.valueOf(dto.getGenre().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Género inválido: " + dto.getGenre());
         }
+
+        Song updatedSong = new Song();
+        updatedSong.setTitle(dto.getName());
+        updatedSong.setGenre(genre);
+
+        try {
+            songService.updateSong(id, updatedSong, user);
+        } catch (Exception ex) {
+            throw new BadRequestException(ex.getMessage());
+        }
+        return ResponseEntity.noContent().build();
     }
 
-    // DELETE /songs/:id
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteSong(@PathVariable Long id, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<?> deleteSong(@PathVariable Long id,
+                                        @RequestHeader("Authorization") String token) {
+        User user = authorizationService.authorize(extractToken(token));
         try {
-            User user = authorizationService.authorize(token);
-            Song song = songService.getSongById(id);
-
-            if (song == null || !song.getArtist().equals(user)) {
-                return ResponseEntity.status(403).body("You are not authorized to delete this song");
-            }
-
             songService.deleteSong(id, user);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body(e.getMessage());
+        } catch (Exception ex) {
+            throw new BadRequestException(ex.getMessage());
         }
+        return ResponseEntity.noContent().build();
     }
 
-    // GET /me/songs
-    @GetMapping("/me/songs")
-    public ResponseEntity<?> getCurrentUserSongs(@RequestHeader("Authorization") String token) {
-        try {
-            User user = authorizationService.authorize(token);
-            List<Playlist> playlists = songService.getSongsByUser(user);
-
-            List<Song> songs = playlists.stream()
-                    .flatMap(playlist -> playlist.getSongs().stream())
-                    .collect(Collectors.toList());
-
-            List<SongResponseDTO> response = songs.stream()
-                    .map(song -> modelMapper.map(song, SongResponseDTO.class))
-                    .collect(Collectors.toList());
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.status(403).body(e.getMessage());
-        }
+    @GetMapping("/me")
+    public ResponseEntity<List<SongResponseDTO>> getCurrentUserSongs(@RequestHeader("Authorization") String token) {
+        User user = authorizationService.authorize(extractToken(token));
+        List<Song> songs = songService.getSongsByUser(user);
+        List<SongResponseDTO> response = songs.stream()
+                .map(song -> modelMapper.map(song, SongResponseDTO.class))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
     }
 }
